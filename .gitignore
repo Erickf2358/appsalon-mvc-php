@@ -1,0 +1,14 @@
+# Environment variables - never commit credentials
+includes/.env
+
+# Composer dependencies
+/vendor/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+
+node_modules
+vendor
+

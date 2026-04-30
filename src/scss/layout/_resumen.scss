@@ -1,0 +1,25 @@
+@use 'base/variables' as v;
+@use 'base/mixins' as m;
+
+.resumen-cita {
+    h3 {
+        font-size: 2rem;
+        font-weight: v.$bold;
+        margin-bottom: 2rem;
+    }
+
+    p {
+        font-size: 1.6rem;
+        margin-bottom: 1rem;
+
+        span {
+            font-weight: v.$bold;
+        }
+    }
+
+    h4 {
+        font-size: 1.8rem;
+        font-weight: v.$bold;
+        margin: 2rem 0 1rem 0;
+    }
+}
