@@ -73,13 +73,15 @@ class Usuario extends ActiveRecord {
     }
     // revisa si el usuario ya existe
     public static function existeUsuario($email) {
-        $emailEscapado = self::$db->escape_string($email);
-        $query = "SELECT * FROM " . static::$tabla . " WHERE email = '$emailEscapado' LIMIT 1";
-        $resultado = self::$db->query($query);
-        if($resultado->num_rows) {
+        $query = "SELECT COUNT(*) FROM " . static::$tabla . " WHERE email = :email";
+        $stmt = self::$db->prepare($query);
+        $stmt->execute(['email' => $email]);
+
+        $existe = (int) $stmt->fetchColumn() > 0;
+        if($existe) {
             self::$alertas['error'][] = 'El usuario ya existe';
         }
-        return $resultado->num_rows;
+        return $existe;
     }
 
     public function hashPassword() {
@@ -91,9 +93,8 @@ class Usuario extends ActiveRecord {
     }
 
     public static function whereToken($token) {
-        $tokenEscapado = self::$db->escape_string($token);
-        $query = "SELECT * FROM " . static::$tabla . " WHERE token = '$tokenEscapado' LIMIT 1";
-        $resultado = self::consultarSQL($query);
+        $query = "SELECT * FROM " . static::$tabla . " WHERE token = :token LIMIT 1";
+        $resultado = self::consultarSQL($query, ['token' => $token]);
         return array_shift($resultado);
     }
 

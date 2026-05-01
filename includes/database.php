@@ -1,18 +1,25 @@
 <?php
 
-$db = mysqli_connect(
-    $_ENV['DB_HOST'], 
-    $_ENV['DB_USER'], 
-    $_ENV['DB_PASS'], 
-    $_ENV['DB_NAME']);
+$dsn = sprintf(
+    "pgsql:host=%s;port=%s;dbname=%s",
+    $_ENV['DB_HOST'],
+    $_ENV['DB_PORT'],
+    $_ENV['DB_NAME']
+);
 
-$db->set_charset("utf8");
-
-
-
-if (!$db) {
-    error_log('MySQL connection failed: ' . mysqli_connect_error());
+try {
+    $db = new PDO(
+        $dsn,
+        $_ENV['DB_USER'],
+        $_ENV['DB_PASS'],
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]
+    );
+} catch (PDOException $e) {
+    error_log($e->getMessage());
     http_response_code(500);
-    echo "Error interno del servidor. Intenta más tarde.";
-    exit;
+    exit('Database connection failed');
 }

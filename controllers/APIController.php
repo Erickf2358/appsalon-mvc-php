@@ -76,18 +76,18 @@ class APIController {
 
         $usuarioId = intval($_SESSION['id']);
 
-        $query = "SELECT c.id, c.fecha, c.hora,
-                         GROUP_CONCAT(s.nombre ORDER BY s.nombre SEPARATOR ', ') AS servicios,
-                         SUM(s.precio) AS total
-                  FROM citas c
-                  INNER JOIN citasservicios cs ON cs.citaId = c.id
-                  INNER JOIN servicios s ON s.id = cs.servicioId
-                  WHERE c.usuarioId = {$usuarioId}
-                    AND c.fecha >= CURDATE()
-                  GROUP BY c.id
-                  ORDER BY c.fecha ASC, c.hora ASC";
+                $query = "SELECT c.id, c.fecha, c.hora,
+                                                 STRING_AGG(s.nombre, ', ' ORDER BY s.nombre) AS servicios,
+                                                 SUM(s.precio) AS total
+                                    FROM citas c
+                                    INNER JOIN citasservicios cs ON cs.citaId = c.id
+                                    INNER JOIN servicios s ON s.id = cs.servicioId
+                                    WHERE c.usuarioId = :usuarioId
+                                        AND c.fecha >= CURRENT_DATE
+                                    GROUP BY c.id, c.fecha, c.hora
+                                    ORDER BY c.fecha ASC, c.hora ASC";
 
-        $citas = ActiveRecord::fetchAll($query);
+                $citas = ActiveRecord::fetchAll($query, ['usuarioId' => $usuarioId]);
         echo json_encode($citas);
     }
 
@@ -118,11 +118,11 @@ class APIController {
 
         // Fetch services with full details
         $query = "SELECT s.id, s.nombre, s.precio
-                  FROM citasservicios cs
-                  INNER JOIN servicios s ON s.id = cs.servicioId
-                  WHERE cs.citaId = {$citaId}";
+              FROM citasservicios cs
+              INNER JOIN servicios s ON s.id = cs.servicioId
+              WHERE cs.citaId = :citaId";
 
-        $servicios = ActiveRecord::fetchAll($query);
+        $servicios = ActiveRecord::fetchAll($query, ['citaId' => $citaId]);
 
         echo json_encode([
             'id'        => $cita->id,
@@ -158,8 +158,7 @@ class APIController {
         }
 
         // Delete related services first (FK integrity)
-        $idEscapado = ActiveRecord::escapar($citaId);
-        ActiveRecord::ejecutar("DELETE FROM citasservicios WHERE citaId = {$idEscapado}");
+        ActiveRecord::ejecutar("DELETE FROM citasservicios WHERE citaId = :citaId", ['citaId' => $citaId]);
         $cita->eliminar();
 
         echo json_encode(['resultado' => true]);
@@ -191,11 +190,11 @@ class APIController {
         if(!$cita) { echo json_encode(['error' => 'Cita no encontrada']); return; }
 
         $query = "SELECT s.id, s.nombre, s.precio
-                  FROM citasservicios cs
-                  INNER JOIN servicios s ON s.id = cs.servicioId
-                  WHERE cs.citaId = {$citaId}";
+              FROM citasservicios cs
+              INNER JOIN servicios s ON s.id = cs.servicioId
+              WHERE cs.citaId = :citaId";
 
-        $servicios = ActiveRecord::fetchAll($query);
+        $servicios = ActiveRecord::fetchAll($query, ['citaId' => $citaId]);
 
         echo json_encode([
             'id'        => $cita->id,
@@ -219,8 +218,7 @@ class APIController {
         $cita = Cita::find($citaId);
         if(!$cita) { echo json_encode(['error' => 'Cita no encontrada']); return; }
 
-        $idEsc = ActiveRecord::escapar($citaId);
-        ActiveRecord::ejecutar("DELETE FROM citasservicios WHERE citaId = {$idEsc}");
+        ActiveRecord::ejecutar("DELETE FROM citasservicios WHERE citaId = :citaId", ['citaId' => $citaId]);
         $cita->eliminar();
 
         echo json_encode(['resultado' => true]);
@@ -248,15 +246,14 @@ class APIController {
             return;
         }
 
-        $cita->fecha = ActiveRecord::escapar($fecha);
-        $cita->hora  = ActiveRecord::escapar($hora);
+        $cita->fecha = $fecha;
+        $cita->hora  = $hora;
         $cita->actualizar();
 
         // Replace services
         $serviciosIds = array_filter(array_map('intval', explode(',', $_POST['servicios'] ?? '')));
         if(!empty($serviciosIds)) {
-            $idEsc = ActiveRecord::escapar($citaId);
-            ActiveRecord::ejecutar("DELETE FROM citasservicios WHERE citaId = {$idEsc}");
+            ActiveRecord::ejecutar("DELETE FROM citasservicios WHERE citaId = :citaId", ['citaId' => $citaId]);
             foreach($serviciosIds as $servicioId) {
                 $cs = new CitaServicio(['citaId' => $citaId, 'servicioId' => $servicioId]);
                 $cs->guardar();
